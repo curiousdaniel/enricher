@@ -27,11 +27,14 @@ export function AuctionSelector({ onSelect }: Props) {
     setError(null);
     try {
       const res = await fetch('/api/auctions');
-      if (!res.ok) throw new Error('Failed to load auctions');
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data?.error ?? `Failed to load auctions (${res.status})`;
+        throw new Error(msg);
+      }
       setAuctions(data.auctions ?? []);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
+      setError(e instanceof Error ? e.message : 'Failed to load auctions');
     } finally {
       setLoading(false);
     }

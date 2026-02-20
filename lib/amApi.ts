@@ -1,8 +1,11 @@
-const AM_BASE = `https://${process.env.AM_DOMAIN}/amapi`;
+const AM_BASE = `https://${process.env.AM_DOMAIN ?? ''}/amapi`;
 
 let cachedToken: string | null = null;
 
 export async function getToken(): Promise<string> {
+  if (!process.env.AM_DOMAIN || !process.env.AM_EMAIL || !process.env.AM_PASSWORD) {
+    throw new Error('AuctionMethod credentials missing — set AM_DOMAIN, AM_EMAIL, and AM_PASSWORD in environment');
+  }
   if (cachedToken) return cachedToken;
 
   const res = await fetch(`${AM_BASE}/auth`, {
@@ -14,9 +17,11 @@ export async function getToken(): Promise<string> {
     }),
   });
   const data = await res.json();
-  if (data.status !== 'success') throw new Error('AM auth failed');
+  if (data.status !== 'success') {
+    throw new Error('AuctionMethod auth failed — check AM_EMAIL, AM_PASSWORD, and AM_DOMAIN');
+  }
   const token: string = data.token;
-  if (!token) throw new Error('AM auth failed: no token');
+  if (!token) throw new Error('AuctionMethod auth failed: no token');
   cachedToken = token;
   return token;
 }
@@ -104,6 +109,10 @@ export async function getAuctions(
       headers: { Authorization: `Bearer ${token}` },
     }
   );
+  if (res.status === 401) {
+    clearToken();
+    throw new Error('AuctionMethod auth failed — check AM_EMAIL, AM_PASSWORD, and AM_DOMAIN');
+  }
   if (!res.ok) throw new Error(`AM auctions fetch failed: ${res.status}`);
   return res.json();
 }

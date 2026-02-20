@@ -16,6 +16,7 @@ export async function GET() {
     return NextResponse.json({ auctions });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to fetch auctions';
+    console.error('[auctions]', err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
