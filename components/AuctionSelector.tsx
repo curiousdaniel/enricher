@@ -33,14 +33,7 @@ export function AuctionSelector({ onSelect }: Props) {
         throw new Error(msg);
       }
       const list = data.auctions ?? [];
-      list.sort((a: Auction, b: Auction) => {
-        const da = new Date(a.endDate).getTime();
-        const db = new Date(b.endDate).getTime();
-        if (Number.isNaN(da) && Number.isNaN(db)) return 0;
-        if (Number.isNaN(da)) return 1;
-        if (Number.isNaN(db)) return -1;
-        return db - da;
-      });
+      list.sort((a: Auction, b: Auction) => b.id - a.id);
       setAuctions(list);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load auctions');

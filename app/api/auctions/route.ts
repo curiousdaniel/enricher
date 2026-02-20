@@ -3,7 +3,7 @@ import { getAuctions } from '@/lib/amApi';
 
 export async function GET() {
   try {
-    const data = await getAuctions(20);
+    const data = await getAuctions(50);
     const auctions = (data.auctions || []).map((a: { id: number; title: string; starts?: string; ends?: string; status: string; city?: string; state?: string }) => ({
       id: a.id,
       title: a.title,
