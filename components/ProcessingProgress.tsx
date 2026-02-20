@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { enrichLot } from '@/lib/enrichLot';
+import { enrichLot, ENRICH_DELAY_MS } from '@/lib/enrichLot';
 import { StatusBadge } from './StatusBadge';
 import type { EnrichedLot } from '@/lib/types';
 
@@ -60,6 +60,15 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
           };
         }
         onLotsUpdate([...updated]);
+
+        if (cancelled || pausedRef.current || stoppedRef.current) break;
+        const hasMorePending = updated.some((l, idx) => idx > i && l.status === 'pending');
+        if (hasMorePending) {
+          for (let wait = 0; wait < ENRICH_DELAY_MS; wait += 1000) {
+            if (cancelled || !mountedRef.current || pausedRef.current || stoppedRef.current) break;
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+        }
       }
     }
 
@@ -105,6 +114,9 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
           </div>
           <p className="text-text-secondary text-sm mt-2">
             Enriching lot {Math.min(done + 1, total)} of {total}...
+          </p>
+          <p className="text-text-secondary/70 text-xs mt-0.5">
+            30s delay between lots to stay under API rate limits
           </p>
           {(() => {
             const errorCount = lots.filter((l) => l.status === 'error').length;

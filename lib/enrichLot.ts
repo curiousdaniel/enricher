@@ -5,9 +5,14 @@ export interface EnrichResult {
   enrichedDescription: string;
 }
 
-export async function enrichLot(
-  lot: LotData
-): Promise<EnrichResult> {
+/** Delay between API calls to stay under Claude's 30K input tokens/min limit (Tier 1) */
+export const ENRICH_DELAY_MS = 30_000;
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function enrichLot(lot: LotData): Promise<EnrichResult> {
   const res = await fetch('/api/enrich', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -19,6 +24,13 @@ export async function enrichLot(
       imageMimeType: lot.imageMimeType ?? null,
     }),
   });
+
+  if (res.status === 429) {
+    const retryAfter = res.headers.get('retry-after');
+    const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 60_000;
+    await sleep(Math.min(waitMs, 120_000));
+    return enrichLot(lot);
+  }
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: res.statusText }));

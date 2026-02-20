@@ -158,14 +158,14 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('Enrich error:', err);
+    const apiErr = err as Error & { status?: number; error?: { type?: string } };
+    const status = apiErr?.status === 429 ? 429 : 500;
     let message = 'Enrichment failed';
     if (err instanceof Error) {
       message = err.message;
-      // Include API error details when available (e.g. Anthropic rate limit, auth)
-      const apiErr = err as Error & { status?: number; error?: { type?: string } };
-      if (apiErr.status) message += ` (HTTP ${apiErr.status})`;
-      if (apiErr.error?.type) message += ` — ${apiErr.error.type}`;
+      if (apiErr?.status) message += ` (HTTP ${apiErr.status})`;
+      if (apiErr?.error?.type) message += ` — ${apiErr.error.type}`;
     }
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status });
   }
 }
