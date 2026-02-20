@@ -67,6 +67,10 @@ export async function patchItem(
     clearToken();
     throw new Error('Token expired');
   }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`AM patch item failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
+  }
   return res.json();
 }
 
@@ -95,7 +99,10 @@ export async function getItemsByAuction(
     clearToken();
     throw new Error('Token expired');
   }
-  if (!res.ok) throw new Error(`AM items fetch failed: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`AM items fetch failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
+  }
   return res.json();
 }
 
@@ -129,6 +136,9 @@ export async function getAuctions(
     clearToken();
     throw new Error('AuctionMethod auth failed — check AM_EMAIL, AM_PASSWORD, and AM_DOMAIN');
   }
-  if (!res.ok) throw new Error(`AM auctions fetch failed: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`AM auctions fetch failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
+  }
   return res.json();
 }
