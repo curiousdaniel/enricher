@@ -83,14 +83,29 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
             />
           </div>
           <p className="text-text-secondary text-sm mt-2">
-            Enriching lot {done + 1} of {total}...
+            Enriching lot {Math.min(done + 1, total)} of {total}...
           </p>
+          {(() => {
+            const errorCount = lots.filter((l) => l.status === 'error').length;
+            if (errorCount > 0) {
+              return (
+                <p className="text-error text-xs mt-1">
+                  {errorCount} lot{errorCount !== 1 ? 's' : ''} failed — see details below
+                </p>
+              );
+            }
+            return null;
+          })()}
         </div>
         <div className="grid gap-3">
           {lots.map((el) => (
             <div
               key={el.original.lotNumber}
-              className="flex items-center gap-4 p-3 rounded-lg bg-surface border border-[#2A2A2A]"
+              className={`flex items-center gap-4 p-3 rounded-lg border ${
+                el.status === 'error'
+                  ? 'bg-error/5 border-error/30'
+                  : 'bg-surface border-[#2A2A2A]'
+              }`}
             >
               {el.original.imageBase64 ? (
                 <img
@@ -107,6 +122,11 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
                 <p className="text-text-primary font-medium truncate">
                   Lot {el.original.lotNumber}: {el.original.title || '(no title)'}
                 </p>
+                {el.status === 'error' && el.error && (
+                  <p className="text-error text-xs mt-1.5 max-w-md break-words">
+                    {el.error}
+                  </p>
+                )}
               </div>
               <StatusBadge status={el.status} />
             </div>

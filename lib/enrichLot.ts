@@ -21,8 +21,9 @@ export async function enrichLot(
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? `Enrich failed: ${res.status}`);
+    const data = await res.json().catch(() => ({ error: res.statusText }));
+    const msg = data?.error ?? data?.message ?? `Enrich failed: ${res.status}`;
+    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
   }
 
   return res.json();
