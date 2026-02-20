@@ -37,6 +37,16 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
         const el = updated[i];
         if (el.status !== 'pending') continue;
 
+        const alreadyProcessed = updated.filter((l) => l.status === 'enriched' || l.status === 'error').length;
+        if (alreadyProcessed > 0) {
+          for (let wait = 0; wait < ENRICH_DELAY_MS; wait += 1000) {
+            if (cancelled || !mountedRef.current || pausedRef.current || stoppedRef.current) break;
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+        }
+
+        if (cancelled || !mountedRef.current || pausedRef.current || stoppedRef.current) break;
+
         updated[i] = { ...el, status: 'processing' };
         onLotsUpdate([...updated]);
 
@@ -60,15 +70,6 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
           };
         }
         onLotsUpdate([...updated]);
-
-        if (cancelled || pausedRef.current || stoppedRef.current) break;
-        const hasMorePending = updated.some((l, idx) => idx > i && l.status === 'pending');
-        if (hasMorePending) {
-          for (let wait = 0; wait < ENRICH_DELAY_MS; wait += 1000) {
-            if (cancelled || !mountedRef.current || pausedRef.current || stoppedRef.current) break;
-            await new Promise((r) => setTimeout(r, 1000));
-          }
-        }
       }
     }
 
