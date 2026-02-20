@@ -88,7 +88,7 @@ export function LotRow({ lot, onUpdate, onRerun }: Props) {
         <div className="flex flex-col gap-2">
           <StatusBadge status={el.status} />
           {hasError && el.error && (
-            <p className="text-error text-xs max-w-[200px]">{el.error}</p>
+            <p className="text-error text-sm max-w-xs break-words">{el.error}</p>
           )}
           <button
             type="button"

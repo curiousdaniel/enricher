@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { enrichLot } from '@/lib/enrichLot';
 import { StatusBadge } from './StatusBadge';
 import type { EnrichedLot } from '@/lib/types';
@@ -13,7 +13,11 @@ interface Props {
 
 export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
   const pausedRef = useRef(false);
+  const stoppedRef = useRef(false);
   const mountedRef = useRef(true);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isStopped, setIsStopped] = useState(false);
+  const [resumeKey, setResumeKey] = useState(0);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -22,12 +26,14 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    pausedRef.current = isPaused;
+    stoppedRef.current = isStopped;
 
     async function process() {
       const updated = [...lots];
 
       for (let i = 0; i < updated.length; i++) {
-        if (cancelled || !mountedRef.current || pausedRef.current) break;
+        if (cancelled || !mountedRef.current || pausedRef.current || stoppedRef.current) break;
         const el = updated[i];
         if (el.status !== 'pending') continue;
 
@@ -55,19 +61,34 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
         }
         onLotsUpdate([...updated]);
       }
-
-      const allDone = updated.every(
-        (l) => l.status === 'enriched' || l.status === 'error'
-      );
-      if (allDone && mountedRef.current) onComplete();
     }
 
-    process();
+    if (!isStopped && !isPaused) process();
     return () => { cancelled = true; };
-  }, [lots, onLotsUpdate, onComplete]);
+  }, [lots, onLotsUpdate, isPaused, isStopped, resumeKey]);
 
   const done = lots.filter((l) => l.status === 'enriched' || l.status === 'error').length;
   const total = lots.length;
+  const allDone = done === total;
+  const hasPending = lots.some((l) => l.status === 'pending');
+  const canViewResults = allDone || isStopped;
+
+  const handlePause = () => {
+    setIsPaused(true);
+    pausedRef.current = true;
+  };
+
+  const handleResume = () => {
+    setIsPaused(false);
+    pausedRef.current = false;
+    setResumeKey((k) => k + 1);
+  };
+
+  const handleStop = () => {
+    setIsStopped(true);
+    stoppedRef.current = true;
+    pausedRef.current = true;
+  };
 
   return (
     <div className="min-h-screen p-8">
@@ -89,13 +110,53 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
             const errorCount = lots.filter((l) => l.status === 'error').length;
             if (errorCount > 0) {
               return (
-                <p className="text-error text-xs mt-1">
+                <p className="text-error text-sm mt-1 font-medium">
                   {errorCount} lot{errorCount !== 1 ? 's' : ''} failed — see details below
                 </p>
               );
             }
             return null;
           })()}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          {hasPending && !isStopped && (
+            isPaused ? (
+              <button
+                type="button"
+                onClick={handleResume}
+                className="px-4 py-2 rounded bg-accent text-black hover:bg-accent/90 text-sm font-medium"
+              >
+                Resume
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePause}
+                className="px-4 py-2 rounded bg-[#2A2A2A] text-text-primary hover:bg-[#333] text-sm font-medium border border-[#333]"
+              >
+                Pause
+              </button>
+            )
+          )}
+          {hasPending && !isStopped && (
+            <button
+              type="button"
+              onClick={handleStop}
+              className="px-4 py-2 rounded bg-error/20 text-error hover:bg-error/30 text-sm font-medium border border-error/40"
+            >
+              Stop & View Results
+            </button>
+          )}
+          {canViewResults && (
+            <button
+              type="button"
+              onClick={onComplete}
+              className="px-4 py-2 rounded bg-accent text-black hover:bg-accent/90 text-sm font-medium"
+            >
+              View Results
+            </button>
+          )}
         </div>
         <div className="grid gap-3">
           {lots.map((el) => (
@@ -123,7 +184,7 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
                   Lot {el.original.lotNumber}: {el.original.title || '(no title)'}
                 </p>
                 {el.status === 'error' && el.error && (
-                  <p className="text-error text-xs mt-1.5 max-w-md break-words">
+                  <p className="text-error text-sm mt-1.5 max-w-md break-words font-medium">
                     {el.error}
                   </p>
                 )}
