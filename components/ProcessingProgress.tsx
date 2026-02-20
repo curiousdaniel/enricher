@@ -119,7 +119,7 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
             Enriching lot {Math.min(done + 1, total)} of {total}...
           </p>
           <p className="text-text-secondary/70 text-xs mt-0.5">
-            30s delay between lots to stay under API rate limits
+            15s delay between lots to stay under API rate limits
           </p>
           {(() => {
             const errorCount = lots.filter((l) => l.status === 'error').length;
@@ -198,9 +198,25 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-text-primary font-medium truncate">
-                  Lot {el.original.lotNumber}: {el.original.title || '(no title)'}
+                <p className="text-text-secondary text-sm">
+                  Lot {el.original.lotNumber}
                 </p>
+                {(el.status === 'enriched' || el.status === 'edited') ? (
+                  <>
+                    <p className="text-text-primary font-medium mt-0.5 line-clamp-2">
+                      {el.enrichedTitle || el.original.title}
+                    </p>
+                    {el.enrichedDescription && (
+                      <p className="text-text-secondary/80 text-xs mt-1 line-clamp-2">
+                        {el.enrichedDescription}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-text-primary font-medium truncate mt-0.5">
+                    {el.original.title || '(no title)'}
+                  </p>
+                )}
                 {el.status === 'error' && el.error && (
                   <p className="text-error text-sm mt-1.5 max-w-md break-words font-medium">
                     {el.error}

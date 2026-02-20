@@ -6,7 +6,7 @@ export interface EnrichResult {
 }
 
 /** Delay between API calls to stay under Claude's 30K input tokens/min limit (Tier 1) */
-export const ENRICH_DELAY_MS = 30_000;
+export const ENRICH_DELAY_MS = 15_000;
 
 /** Max wait for a single enrich request (Claude + web search can take 1–2 min) */
 const ENRICH_TIMEOUT_MS = 120_000;
