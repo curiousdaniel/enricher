@@ -159,7 +159,10 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('Enrich error:', err);
     const apiErr = err as Error & { status?: number; error?: { type?: string } };
-    const status = apiErr?.status === 429 ? 429 : 500;
+    const status =
+      apiErr?.status === 429 ? 429
+      : apiErr?.status === 529 ? 529
+      : 500;
     let message = 'Enrichment failed';
     if (err instanceof Error) {
       message = err.message;

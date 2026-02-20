@@ -21,7 +21,9 @@ export function ActionBar({ lots, onLotsUpdate }: Props) {
   const enriched = lots.filter((l) => l.status === 'enriched' || l.status === 'edited').length;
   const errors = lots.filter((l) => l.status === 'error').length;
   const pushed = lots.filter((l) => l.status === 'pushed').length;
-  const skipped = lots.length - enriched - errors - pushed;
+  const notCompleted = lots.filter(
+    (l) => l.status === 'pending' || l.status === 'processing'
+  ).length;
 
   const handleExportCSV = () => {
     const csv = exportEnrichedCSV(lots);
@@ -88,7 +90,9 @@ export function ActionBar({ lots, onLotsUpdate }: Props) {
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#1A1A1A]/95 backdrop-blur border-t border-[#2A2A2A] px-6 py-4">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <p className="text-text-secondary text-sm">
-            {enriched} enriched, {errors} errors, {skipped} skipped
+            {enriched} enriched
+            {errors > 0 && <>, {errors} errors</>}
+            {notCompleted > 0 && <>, {notCompleted} not completed</>}
             {pushed > 0 ? `, ${pushed} pushed` : ''}
           </p>
           <div className="flex gap-3">

@@ -11,11 +11,17 @@ export const ENRICH_DELAY_MS = 15_000;
 /** Max wait for a single enrich request (Claude + web search can take 1–2 min) */
 const ENRICH_TIMEOUT_MS = 120_000;
 
+/** Max retries for 429/529 before giving up */
+const MAX_RETRIES = 4;
+
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function enrichLot(lot: LotData): Promise<EnrichResult> {
+export async function enrichLot(
+  lot: LotData,
+  retryCount = 0
+): Promise<EnrichResult> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), ENRICH_TIMEOUT_MS);
 
@@ -36,17 +42,22 @@ export async function enrichLot(lot: LotData): Promise<EnrichResult> {
   } catch (err) {
     clearTimeout(timeoutId);
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error(`Request timed out after ${ENRICH_TIMEOUT_MS / 1000}s — try Re-run later`);
+      throw new Error(`Request timed out after ${ENRICH_TIMEOUT_MS / 1000}s — try re-running later`);
     }
     throw err;
   }
   clearTimeout(timeoutId);
 
-  if (res.status === 429) {
+  if (res.status === 429 || res.status === 529) {
+    if (retryCount >= MAX_RETRIES) {
+      const body = await res.json().catch(() => ({}));
+      const msg = body?.error ?? `API overloaded (HTTP ${res.status}) — try again later`;
+      throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    }
     const retryAfter = res.headers.get('retry-after');
     const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 60_000;
     await sleep(Math.min(waitMs, 120_000));
-    return enrichLot(lot);
+    return enrichLot(lot, retryCount + 1);
   }
 
   if (!res.ok) {

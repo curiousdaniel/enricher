@@ -15,6 +15,8 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
   const pausedRef = useRef(false);
   const stoppedRef = useRef(false);
   const mountedRef = useRef(true);
+  const lotsRef = useRef(lots);
+  lotsRef.current = lots;
   const [isPaused, setIsPaused] = useState(false);
   const [isStopped, setIsStopped] = useState(false);
   const [resumeKey, setResumeKey] = useState(0);
@@ -31,7 +33,7 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
     stoppedRef.current = isStopped;
 
     async function process() {
-      const updated = [...lots];
+      const updated = [...lotsRef.current];
 
       for (let i = 0; i < updated.length; i++) {
         if (cancelled || !mountedRef.current || pausedRef.current || stoppedRef.current) break;
@@ -77,7 +79,7 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
 
     if (!isStopped && !isPaused) process();
     return () => { cancelled = true; };
-  }, [lots, onLotsUpdate, isPaused, isStopped, resumeKey]);
+  }, [onLotsUpdate, isPaused, isStopped, resumeKey]);
 
   const done = lots.filter((l) => l.status === 'enriched' || l.status === 'error').length;
   const total = lots.length;
