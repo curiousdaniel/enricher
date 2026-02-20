@@ -67,11 +67,15 @@ export async function patchItem(
     clearToken();
     throw new Error('Token expired');
   }
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(`AM patch item failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
   }
-  return res.json();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Response is not valid JSON — ${text.slice(0, 300)}`);
+  }
 }
 
 export interface AMItem {
@@ -99,11 +103,15 @@ export async function getItemsByAuction(
     clearToken();
     throw new Error('Token expired');
   }
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(`AM items fetch failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
   }
-  return res.json();
+  try {
+    return JSON.parse(text) as AMItemsResponse;
+  } catch {
+    throw new Error(`Response is not valid JSON — ${text.slice(0, 300)}`);
+  }
 }
 
 export interface AMAuction {
@@ -136,9 +144,13 @@ export async function getAuctions(
     clearToken();
     throw new Error('AuctionMethod auth failed — check AM_EMAIL, AM_PASSWORD, and AM_DOMAIN');
   }
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(`AM auctions fetch failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
   }
-  return res.json();
+  try {
+    return JSON.parse(text) as AMAuctionsResponse;
+  } catch {
+    throw new Error(`Response is not valid JSON (server may have returned HTML) — ${text.slice(0, 300)}`);
+  }
 }
