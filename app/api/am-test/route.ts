@@ -14,6 +14,11 @@ export async function GET() {
       };
       return NextResponse.json({ success: false, steps });
     }
+    steps[0] = {
+      step: 'Environment variables',
+      status: 'ok',
+      message: `AM_DOMAIN=${process.env.AM_DOMAIN}`,
+    };
 
     steps.push({ step: 'Authentication', status: 'ok' });
     try {
@@ -22,10 +27,13 @@ export async function GET() {
       steps[1] = { step: 'Authentication', status: 'ok', message: 'Token received' };
     } catch (authErr) {
       clearToken();
+      let errMsg = authErr instanceof Error ? authErr.message : String(authErr);
+      const cause = authErr instanceof Error ? (authErr.cause as Error) : null;
+      if (cause?.message) errMsg += ` (cause: ${cause.message})`;
       steps[1] = {
         step: 'Authentication',
         status: 'error',
-        message: authErr instanceof Error ? authErr.message : String(authErr),
+        message: `${errMsg} — URL: https://${process.env.AM_DOMAIN}/amapi/auth`,
       };
       return NextResponse.json({ success: false, steps });
     }

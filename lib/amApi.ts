@@ -2,20 +2,36 @@ const AM_BASE = `https://${process.env.AM_DOMAIN ?? ''}/amapi`;
 
 let cachedToken: string | null = null;
 
+function formatFetchError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  let msg = err.message;
+  const cause = err.cause as Error & { code?: string } | undefined;
+  if (cause?.message) msg += ` — ${cause.message}`;
+  if (cause?.code) msg += ` (${cause.code})`;
+  return msg;
+}
+
 export async function getToken(): Promise<string> {
   if (!process.env.AM_DOMAIN || !process.env.AM_EMAIL || !process.env.AM_PASSWORD) {
     throw new Error('AuctionMethod credentials missing — set AM_DOMAIN, AM_EMAIL, and AM_PASSWORD in environment');
   }
   if (cachedToken) return cachedToken;
 
-  const res = await fetch(`${AM_BASE}/auth`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: process.env.AM_EMAIL,
-      password: process.env.AM_PASSWORD,
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${AM_BASE}/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: process.env.AM_EMAIL,
+        password: process.env.AM_PASSWORD,
+      }),
+    });
+  } catch (fetchErr) {
+    const msg = formatFetchError(fetchErr);
+    throw new Error(`Network error: ${msg}. The server may be unreachable, or there may be a firewall/DNS issue.`);
+  }
+
   const data = await res.json();
   if (data.status !== 'success') {
     throw new Error('AuctionMethod auth failed — check AM_EMAIL, AM_PASSWORD, and AM_DOMAIN');
