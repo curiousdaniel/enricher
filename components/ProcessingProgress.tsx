@@ -18,6 +18,7 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
   const [isPaused, setIsPaused] = useState(false);
   const [isStopped, setIsStopped] = useState(false);
   const [resumeKey, setResumeKey] = useState(0);
+  const [processingLotNumber, setProcessingLotNumber] = useState<string | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -47,8 +48,7 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
 
         if (cancelled || !mountedRef.current || pausedRef.current || stoppedRef.current) break;
 
-        updated[i] = { ...el, status: 'processing' };
-        onLotsUpdate([...updated]);
+        setProcessingLotNumber(el.original.lotNumber);
 
         try {
           const result = await enrichLot(el.original);
@@ -69,8 +69,10 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
             error: err instanceof Error ? err.message : 'Enrichment failed',
           };
         }
+        setProcessingLotNumber(null);
         onLotsUpdate([...updated]);
       }
+      setProcessingLotNumber(null);
     }
 
     if (!isStopped && !isPaused) process();
@@ -172,7 +174,10 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
           )}
         </div>
         <div className="grid gap-3">
-          {lots.map((el) => (
+          {lots.map((el) => {
+            const isProcessing = processingLotNumber === el.original.lotNumber;
+            const displayStatus = isProcessing ? 'processing' : el.status;
+            return (
             <div
               key={el.original.lotNumber}
               className={`flex items-center gap-4 p-3 rounded-lg border ${
@@ -202,9 +207,10 @@ export function ProcessingProgress({ lots, onLotsUpdate, onComplete }: Props) {
                   </p>
                 )}
               </div>
-              <StatusBadge status={el.status} />
+              <StatusBadge status={displayStatus} />
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
