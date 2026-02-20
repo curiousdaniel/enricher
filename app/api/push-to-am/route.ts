@@ -3,7 +3,6 @@ import {
   getItemsByAuction,
   patchItem,
   AMItem,
-  AMItemsResponse,
 } from '@/lib/amApi';
 
 interface PushLot {
@@ -29,20 +28,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const data: AMItemsResponse = await getItemsByAuction(auctionId);
-    const items: AMItem[] = data.items ?? [];
+    let items: AMItem[];
+    try {
+      items = await getItemsByAuction(auctionId);
+    } catch (fetchErr) {
+      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      if (msg.includes('HTTP 404') || msg.includes('No items found')) {
+        return NextResponse.json({
+          error:
+            'This auction has no items in AuctionMethod yet. Add lots to the catalog in AuctionMethod first, then try pushing again.',
+        }, { status: 404 });
+      }
+      throw fetchErr;
+    }
 
-    const lotToItem = new Map<string, AMItem>();
+    const lotNumberToItem = new Map<number, AMItem>();
     for (const item of items) {
-      const lotNum = String(item.lot_number ?? '').trim();
-      if (lotNum) lotToItem.set(lotNum, item);
+      const lotNum = parseInt(String(item.lot_number ?? '').trim(), 10);
+      if (!Number.isNaN(lotNum)) lotNumberToItem.set(lotNum, item);
     }
 
     const results: { lotNumber: string; success: boolean; error?: string }[] =
       [];
 
     for (const lot of lots) {
-      const item = lotToItem.get(lot.lotNumber) ?? lotToItem.get(String(lot.lotNumber));
+      const lotNum = parseInt(String(lot.lotNumber).trim(), 10);
+      const item = lotNumberToItem.get(lotNum);
       if (!item) {
         results.push({
           lotNumber: lot.lotNumber,

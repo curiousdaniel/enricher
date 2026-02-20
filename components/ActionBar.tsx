@@ -137,10 +137,12 @@ export function ActionBar({ lots, onLotsUpdate }: Props) {
                 <div className="max-h-32 overflow-y-auto text-sm space-y-1">
                   {pushResults.map((r) => (
                     <div
-                      key={r.lotNumber}
+                      key={r.lotNumber === '-' ? 'push-error' : r.lotNumber}
                       className={r.success ? 'text-success' : 'text-error'}
                     >
-                      Lot {r.lotNumber}: {r.success ? '✓' : r.error}
+                      {r.lotNumber === '-'
+                        ? (r.error ?? 'Push failed')
+                        : `Lot ${r.lotNumber}: ${r.success ? '✓' : r.error}`}
                     </div>
                   ))}
                 </div>

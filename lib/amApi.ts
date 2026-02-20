@@ -89,29 +89,38 @@ export interface AMItemsResponse {
   [key: string]: unknown;
 }
 
-export async function getItemsByAuction(
-  auctionId: string
-): Promise<AMItemsResponse> {
+export async function getItemsByAuction(auctionId: string): Promise<AMItem[]> {
   const token = await getToken();
-  const res = await fetch(
-    `${AM_BASE}/admin/items?auction=${auctionId}&limit=500&offset=0`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
+  const allItems: AMItem[] = [];
+  let offset = 0;
+  const limit = 100;
+
+  while (true) {
+    const res = await fetch(
+      `${AM_BASE}/admin/items?auction=${auctionId}&limit=${limit}&offset=${offset}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (res.status === 401) {
+      clearToken();
+      throw new Error('Token expired');
     }
-  );
-  if (res.status === 401) {
-    clearToken();
-    throw new Error('Token expired');
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`AM items fetch failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
+    }
+    let json: { data?: { items?: AMItem[]; pagination?: { has_more?: boolean } } };
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new Error(`Response is not valid JSON — ${text.slice(0, 300)}`);
+    }
+    const items = json.data?.items ?? [];
+    allItems.push(...items);
+    if (!json.data?.pagination?.has_more) break;
+    offset += limit;
   }
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`AM items fetch failed: HTTP ${res.status} — ${text.slice(0, 300)}`);
-  }
-  try {
-    return JSON.parse(text) as AMItemsResponse;
-  } catch {
-    throw new Error(`Response is not valid JSON — ${text.slice(0, 300)}`);
-  }
+
+  return allItems;
 }
 
 export interface AMAuction {
