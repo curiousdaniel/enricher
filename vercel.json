@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "app/api/enrich/route.ts": { "maxDuration": 60 },
+    "app/api/push-to-am/route.ts": { "maxDuration": 60 }
+  }
+}
